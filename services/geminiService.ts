@@ -1,10 +1,5 @@
 import { GoogleGenAI, Modality, Chat } from "@google/genai";
 
-// Ensure the API key is available from environment variables
-if (!process.env.API_KEY) {
-  throw new Error("La variable de entorno API_KEY no está configurada");
-}
-
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 /**

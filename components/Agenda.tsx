@@ -132,6 +132,7 @@ const AppointmentModal = ({ appointment, selectedDate, onClose, setAppointments 
         date: appointment?.date || selectedDate,
         time: appointment?.time || '10:00',
     });
+    const [isInputFocused, setIsInputFocused] = useState(false);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -147,31 +148,40 @@ const AppointmentModal = ({ appointment, selectedDate, onClose, setAppointments 
         onClose();
     };
     
+    const handleFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        setIsInputFocused(true);
+        setTimeout(() => {
+            e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+    };
+
+    const handleBlur = () => setIsInputFocused(false);
+
     return (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center" onClick={onClose}>
+        <div className={`fixed inset-0 bg-black/80 z-50 flex justify-center ${isInputFocused ? 'items-start pt-4 sm:pt-8' : 'items-center'}`} onClick={onClose}>
             <div className="bg-card p-6 rounded-lg shadow-xl w-full max-w-sm mx-4 border border-border-card" onClick={(e) => e.stopPropagation()}>
                 <h3 className="text-xl font-cinzel mb-4 text-main">{appointment ? 'Editar Cita' : 'Nueva Cita'}</h3>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-4 max-h-[65vh] overflow-y-auto pr-3">
                      <div>
                         <label className="text-sm font-medium text-secondary">Nombre del Cliente</label>
-                        <input type="text" name="clientName" value={formData.clientName} onChange={handleChange} className="w-full mt-1 p-2 bg-app border border-border-card rounded-md" required />
+                        <input type="text" name="clientName" value={formData.clientName} onChange={handleChange} onFocus={handleFocus} onBlur={handleBlur} className="w-full mt-1 p-2 bg-app border border-border-card rounded-md" required />
                     </div>
                     <div>
                         <label className="text-sm font-medium text-secondary">Teléfono</label>
-                        <input type="tel" name="phone" value={formData.phone} onChange={handleChange} className="w-full mt-1 p-2 bg-app border border-border-card rounded-md" required />
+                        <input type="tel" name="phone" value={formData.phone} onChange={handleChange} onFocus={handleFocus} onBlur={handleBlur} className="w-full mt-1 p-2 bg-app border border-border-card rounded-md" required />
                     </div>
                     <div>
                         <label className="text-sm font-medium text-secondary">Tipo/Descripción de Tatuaje</label>
-                        <textarea name="tattooType" value={formData.tattooType} onChange={handleChange} rows={2} className="w-full mt-1 p-2 bg-app border border-border-card rounded-md resize-none" required></textarea>
+                        <textarea name="tattooType" value={formData.tattooType} onChange={handleChange} onFocus={handleFocus} onBlur={handleBlur} rows={2} className="w-full mt-1 p-2 bg-app border border-border-card rounded-md resize-none" required></textarea>
                     </div>
                     <div className="flex gap-4">
                         <div className="flex-1">
                              <label className="text-sm font-medium text-secondary">Fecha</label>
-                            <input type="date" name="date" value={formData.date} onChange={handleChange} className="w-full mt-1 p-2 bg-app border border-border-card rounded-md" required />
+                            <input type="date" name="date" value={formData.date} onChange={handleChange} onFocus={handleFocus} onBlur={handleBlur} className="w-full mt-1 p-2 bg-app border border-border-card rounded-md" required />
                         </div>
                          <div className="flex-1">
                              <label className="text-sm font-medium text-secondary">Hora</label>
-                            <input type="time" name="time" value={formData.time} onChange={handleChange} className="w-full mt-1 p-2 bg-app border border-border-card rounded-md" required />
+                            <input type="time" name="time" value={formData.time} onChange={handleChange} onFocus={handleFocus} onBlur={handleBlur} className="w-full mt-1 p-2 bg-app border border-border-card rounded-md" required />
                         </div>
                     </div>
                     <div className="flex gap-4 pt-4">

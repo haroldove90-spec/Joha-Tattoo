@@ -37,6 +37,12 @@ const GenerateDesign: React.FC = () => {
         }
     };
 
+    const handleFocus = (e: React.FocusEvent<HTMLTextAreaElement>) => {
+        setTimeout(() => {
+            e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+    };
+
     const suggestionPills = ["Un león majestuoso con corona floral", "Silueta de lobo geométrico", "Pez koi estilo japonés", "Rosa minimalista de una línea"];
 
     return (
@@ -51,6 +57,7 @@ const GenerateDesign: React.FC = () => {
                     <textarea
                         value={prompt}
                         onChange={(e) => setPrompt(e.target.value)}
+                        onFocus={handleFocus}
                         placeholder="Ej: 'Un dragón rodeando una rama de cerezo, estilo acuarela'"
                         className="w-full h-24 p-4 pr-32 bg-card border border-border-card rounded-lg text-main placeholder-secondary focus:ring-2 focus:ring-primary focus:border-primary transition duration-300 resize-none"
                         aria-label="Descripción del Tatuaje"

@@ -145,6 +145,12 @@ const CreateTrace: React.FC = () => {
         doc.save(`johana-tatuajes-plantilla.pdf`);
     };
 
+    const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+        setTimeout(() => {
+            e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+    };
+
     return (
         <div className="py-8">
             <canvas ref={canvasRef} style={{ display: 'none' }} />
@@ -217,7 +223,7 @@ const CreateTrace: React.FC = () => {
                                     </div>
                                     <div className="flex items-center gap-3 mt-4 max-w-xs mx-auto">
                                         <label htmlFor="pdf-size" className="font-medium text-main text-sm whitespace-nowrap">Tamaño PDF (cm):</label>
-                                        <input type="number" id="pdf-size" value={pdfSize} onChange={(e) => setPdfSize(Number(e.target.value))} className="w-full px-3 py-2 bg-app border border-border-card rounded-lg text-main" />
+                                        <input type="number" id="pdf-size" value={pdfSize} onFocus={handleInputFocus} onChange={(e) => setPdfSize(Number(e.target.value))} className="w-full px-3 py-2 bg-app border border-border-card rounded-lg text-main" />
                                     </div>
                                 </div>
                             </div>

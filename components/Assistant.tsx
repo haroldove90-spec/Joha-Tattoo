@@ -13,6 +13,7 @@ const Assistant: React.FC = () => {
     const [userInput, setUserInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const formRef = useRef<HTMLFormElement>(null);
 
     useEffect(() => {
         // Initialize the chat session when the component mounts
@@ -29,6 +30,13 @@ const Assistant: React.FC = () => {
     };
 
     useEffect(scrollToBottom, [messages]);
+
+    const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+        // Using a timeout allows the keyboard to animate in before scrolling
+        setTimeout(() => {
+            e.target.form?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }, 300);
+    };
 
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -79,11 +87,12 @@ const Assistant: React.FC = () => {
 
             {/* Message Input */}
             <div className="pt-4">
-                <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+                <form ref={formRef} onSubmit={handleSendMessage} className="flex items-center gap-2">
                     <input
                         type="text"
                         value={userInput}
                         onChange={(e) => setUserInput(e.target.value)}
+                        onFocus={handleInputFocus}
                         placeholder="Pregúntale algo al maestro..."
                         className="w-full p-3 bg-card border border-border-card rounded-lg text-main placeholder-secondary focus:ring-2 focus:ring-primary focus:border-primary transition duration-300"
                         disabled={isLoading}

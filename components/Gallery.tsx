@@ -9,6 +9,7 @@ const Gallery: React.FC = () => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isInputFocused, setIsInputFocused] = useState(false);
 
     const loadGallery = useCallback(() => {
         const items = JSON.parse(localStorage.getItem('tattooGallery') || '[]');
@@ -141,7 +142,7 @@ const Gallery: React.FC = () => {
             )}
 
             {selectedImage && (
-                <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center" onClick={() => setSelectedImage(null)}>
+                <div className={`fixed inset-0 bg-black/80 z-50 flex justify-center ${isInputFocused ? 'items-start pt-8' : 'items-center'}`} onClick={() => setSelectedImage(null)}>
                     <div className="bg-card p-6 rounded-lg shadow-xl w-full max-w-xs mx-4 border border-border-card" onClick={(e) => e.stopPropagation()}>
                         <h3 className="text-xl font-cinzel mb-4 text-main">Crear PDF</h3>
                         <div className="bg-white p-1 rounded mb-4">
@@ -149,7 +150,15 @@ const Gallery: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-3 mb-6">
                             <label htmlFor="pdf-size" className="font-medium text-main text-sm">Tamaño (cm):</label>
-                            <input type="number" id="pdf-size" value={pdfSize} onChange={(e) => setPdfSize(Number(e.target.value))} className="w-full px-3 py-2 bg-app border border-border-card rounded-lg text-main" />
+                            <input 
+                                type="number" 
+                                id="pdf-size" 
+                                value={pdfSize} 
+                                onChange={(e) => setPdfSize(Number(e.target.value))} 
+                                onFocus={() => setIsInputFocused(true)}
+                                onBlur={() => setIsInputFocused(false)}
+                                className="w-full px-3 py-2 bg-app border border-border-card rounded-lg text-main" 
+                            />
                         </div>
                         <div className="flex gap-4">
                            <button onClick={() => setSelectedImage(null)} className="w-full bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700 transition">Cancelar</button>

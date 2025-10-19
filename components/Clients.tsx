@@ -44,6 +44,12 @@ const Clients: React.FC = () => {
             .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [appointments, selectedClient]);
 
+    const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+        setTimeout(() => {
+          e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+    };
+
 
     if (selectedClient) {
         return (
@@ -87,6 +93,7 @@ const Clients: React.FC = () => {
                     placeholder="Buscar cliente por nombre..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
+                    onFocus={handleInputFocus}
                     className="w-full p-3 bg-card border border-border-card rounded-lg text-main placeholder-secondary"
                 />
             </div>
