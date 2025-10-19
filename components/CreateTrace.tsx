@@ -107,17 +107,35 @@ const CreateTrace: React.FC = () => {
             const base64Data = await toBase64(sourceFile);
             const stencilUrl = await createTattooTrace(base64Data, sourceFile.type);
             setStencilImage(stencilUrl);
+            
+            // Automatically save to gallery upon successful creation
+            const gallery = JSON.parse(localStorage.getItem('tattooGallery') || '[]');
+            if (!gallery.includes(stencilUrl)) {
+                gallery.unshift(stencilUrl);
+                localStorage.setItem('tattooGallery', JSON.stringify(gallery));
+                window.dispatchEvent(new Event('storage'));
+            }
+            setSaveSuccess(true);
+
         } catch (err: any) {
             setError(err.toString() || 'No se pudo crear la plantilla. Por favor, inténtalo de nuevo.');
         } finally {
             setIsLoading(false);
         }
     };
+    
+    const handleDownloadPng = () => {
+        if (!stencilImage) return;
+        const link = document.createElement('a');
+        link.href = stencilImage;
+        link.download = 'johana-tatuajes-plantilla.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
     const handleDownloadPdf = () => {
         if (!stencilImage) return;
-
-        // 1. Create PDF
         const doc = new jsPDF({ orientation: 'portrait', unit: 'cm', format: 'a4' });
         const width = doc.internal.pageSize.getWidth();
         const height = doc.internal.pageSize.getHeight();
@@ -125,13 +143,6 @@ const CreateTrace: React.FC = () => {
         const y = (height - pdfSize) / 2;
         doc.addImage(stencilImage, 'PNG', x, y, pdfSize, pdfSize);
         doc.save(`johana-tatuajes-plantilla.pdf`);
-
-        // 2. Save to Gallery
-        const gallery = JSON.parse(localStorage.getItem('tattooGallery') || '[]');
-        gallery.unshift(stencilImage);
-        localStorage.setItem('tattooGallery', JSON.stringify(gallery));
-        window.dispatchEvent(new Event('storage'));
-        setSaveSuccess(true);
     };
 
     return (
@@ -185,25 +196,30 @@ const CreateTrace: React.FC = () => {
                             <div className="bg-white p-2 rounded-md inline-block">
                                <img src={stencilImage} alt="Plantilla generada" className="mx-auto max-h-48 rounded"/>
                             </div>
-                            <div className="mt-6 border-t border-border-card pt-4">
-                                <h4 className="font-semibold text-main mb-3">Opciones de Descarga</h4>
-                                <div className="flex items-center gap-3 mb-4 max-w-xs mx-auto">
-                                    <label htmlFor="pdf-size" className="font-medium text-main text-sm whitespace-nowrap">Tamaño (cm):</label>
-                                    <input type="number" id="pdf-size" value={pdfSize} onChange={(e) => setPdfSize(Number(e.target.value))} className="w-full px-3 py-2 bg-app border border-border-card rounded-lg text-main" />
+                            {saveSuccess && (
+                                <p className="text-green-400 font-semibold text-sm bg-green-900/30 px-4 py-2 rounded-full mt-4 inline-block">
+                                    ✓ ¡Guardado automáticamente en tu galería!
+                                </p>
+                            )}
+                            <div className="mt-6 border-t border-border-card pt-4 space-y-4">
+                                <div>
+                                    <h4 className="font-semibold text-main mb-3">Opciones de Descarga</h4>
+                                    <div className="flex flex-col sm:flex-row gap-3">
+                                        <button
+                                            onClick={handleDownloadPng}
+                                            className="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition"
+                                        >
+                                            Descargar PNG
+                                        </button>
+                                        <button onClick={handleDownloadPdf} className="w-full bg-primary text-primary-contrast font-bold py-2 px-4 rounded-lg hover:opacity-90 transition">
+                                            Descargar PDF
+                                        </button>
+                                    </div>
+                                    <div className="flex items-center gap-3 mt-4 max-w-xs mx-auto">
+                                        <label htmlFor="pdf-size" className="font-medium text-main text-sm whitespace-nowrap">Tamaño PDF (cm):</label>
+                                        <input type="number" id="pdf-size" value={pdfSize} onChange={(e) => setPdfSize(Number(e.target.value))} className="w-full px-3 py-2 bg-app border border-border-card rounded-lg text-main" />
+                                    </div>
                                 </div>
-                                <div className="flex flex-col sm:flex-row gap-3">
-                                    <button onClick={handleDownloadPdf} className="w-full bg-primary text-primary-contrast font-bold py-2 px-4 rounded-lg hover:opacity-90 transition">
-                                        Descargar PDF
-                                    </button>
-                                     <a href={stencilImage} download="johana-tatuajes-plantilla.png" className="w-full block bg-card border border-border-card text-main font-bold py-2 px-4 rounded-lg hover:border-primary transition">
-                                        Descargar PNG
-                                    </a>
-                                </div>
-                                {saveSuccess && (
-                                     <p className="text-green-400 font-semibold text-sm bg-green-900/30 px-3 py-1 rounded-full mt-4 inline-block">
-                                        ✓ ¡Guardado en tu galería!
-                                    </p>
-                                )}
                             </div>
                         </div>
                     )}
