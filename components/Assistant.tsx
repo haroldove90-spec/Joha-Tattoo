@@ -16,13 +16,22 @@ const Assistant: React.FC = () => {
     const formRef = useRef<HTMLFormElement>(null);
 
     useEffect(() => {
-        // Initialize the chat session when the component mounts
-        const session = createAssistantChat();
-        setChatSession(session);
-        setMessages([{
-            sender: 'ai',
-            text: "Hola, Johana. Soy tu Maestro Tatuador. Estoy aquí para ayudarte a perfeccionar tu arte. ¿Qué duda tienes hoy?"
-        }]);
+        try {
+            // Initialize the chat session when the component mounts
+            const session = createAssistantChat();
+            setChatSession(session);
+            setMessages([{
+                sender: 'ai',
+                text: "Hola, Johana. Soy tu Maestro Tatuador. Estoy aquí para ayudarte a perfeccionar tu arte. ¿Qué duda tienes hoy?"
+            }]);
+        } catch (error) {
+            console.error("No se pudo inicializar el chat del asistente:", error);
+            const errorMessage = error instanceof Error ? error.message : "Error desconocido.";
+            setMessages([{
+                sender: 'ai',
+                text: `No se pudo iniciar el asistente de chat. Error: ${errorMessage}`
+            }]);
+        }
     }, []);
 
     const scrollToBottom = () => {
@@ -91,19 +100,20 @@ const Assistant: React.FC = () => {
                     <input
                         type="text"
                         value={userInput}
+                        // Fix: Corrected typo from `e.targe` to `e.target` and completed the handler.
                         onChange={(e) => setUserInput(e.target.value)}
                         onFocus={handleInputFocus}
-                        placeholder="Pregúntale algo al maestro..."
-                        className="w-full p-3 bg-card border border-border-card rounded-lg text-main placeholder-secondary focus:ring-2 focus:ring-primary focus:border-primary transition duration-300"
+                        placeholder="Escribe tu pregunta..."
+                        className="w-full p-3 bg-card border border-border-card rounded-lg text-main placeholder-secondary focus:ring-2 focus:ring-primary focus:border-primary transition"
                         disabled={isLoading}
                     />
                     <button
                         type="submit"
                         disabled={isLoading || !userInput.trim()}
-                        className="bg-primary text-primary-contrast p-3 rounded-lg hover:opacity-90 transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                        aria-label="Enviar mensaje"
+                        className="p-3 rounded-lg bg-primary text-primary-contrast transition-opacity hover:opacity-90 disabled:opacity-50"
+                        aria-label="Enviar"
                     >
-                       <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                     </button>
                 </form>
             </div>
@@ -111,4 +121,5 @@ const Assistant: React.FC = () => {
     );
 };
 
+// Fix: Added missing default export to be consumed by App.tsx.
 export default Assistant;

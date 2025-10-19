@@ -1,11 +1,23 @@
 import { GoogleGenAI, Modality, Chat } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+let aiInstance: GoogleGenAI | null = null;
+
+/**
+ * Lazily initializes and returns a singleton instance of the GoogleGenAI client.
+ * The underlying GoogleGenAI constructor will throw an error if the API key is missing.
+ */
+const getAiInstance = (): GoogleGenAI => {
+    if (!aiInstance) {
+        aiInstance = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    }
+    return aiInstance;
+};
 
 /**
  * Creates and returns a new chat session configured to act as a tattoo master mentor.
  */
 export const createAssistantChat = (): Chat => {
+    const ai = getAiInstance();
     const chat = ai.chats.create({
         model: 'gemini-2.5-pro', // Using a more advanced model for expert advice
         config: {
@@ -20,6 +32,7 @@ export const createAssistantChat = (): Chat => {
  */
 export const generateTattooFromPrompt = async (prompt: string): Promise<string> => {
   try {
+    const ai = getAiInstance();
     const fullPrompt = `Un diseño de tatuaje minimalista, limpio, en blanco y negro de ${prompt}. El diseño debe estar sobre un fondo blanco liso, adecuado para una plantilla.`;
     const response = await ai.models.generateImages({
         model: 'imagen-4.0-generate-001',
@@ -39,7 +52,7 @@ export const generateTattooFromPrompt = async (prompt: string): Promise<string> 
     }
   } catch (error) {
     console.error("Error al generar el diseño del tatuaje:", error);
-    throw new Error("No se pudo generar el diseño del tatuaje. Por favor, inténtalo de nuevo.");
+    throw error;
   }
 };
 
@@ -48,6 +61,7 @@ export const generateTattooFromPrompt = async (prompt: string): Promise<string> 
  */
 export const getTattooTip = async (): Promise<string> => {
     try {
+        const ai = getAiInstance();
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: 'Dame un consejo corto, interesante y útil para Johana, una aprendiz de tatuadora, para que se convierta en una experta. Solo una frase o dos.',
@@ -58,7 +72,7 @@ export const getTattooTip = async (): Promise<string> => {
         return response.text;
     } catch (error) {
         console.error("Error al obtener el consejo sobre tatuajes:", error);
-        throw new Error("No se pudo obtener un consejo. Por favor, inténtalo de nuevo.");
+        throw error;
     }
 };
 
@@ -70,6 +84,7 @@ export const getTattooTip = async (): Promise<string> => {
  */
 export const createTattooTrace = async (base64ImageData: string, mimeType: string): Promise<string> => {
     try {
+        const ai = getAiInstance();
         const imagePart = {
             inlineData: {
                 data: base64ImageData,
@@ -100,7 +115,7 @@ export const createTattooTrace = async (base64ImageData: string, mimeType: strin
 
     } catch (error) {
         console.error("Error al crear el trazo del tatuaje:", error);
-        throw new Error("No se pudo crear la plantilla. Por favor, inténtalo de nuevo.");
+        throw error;
     }
 };
 
@@ -112,6 +127,7 @@ export const createTattooTrace = async (base64ImageData: string, mimeType: strin
  */
 export const generateTattooOnBodyPart = async (tattooImageBase64: string, tattooImageMimeType: string, bodyPart: string): Promise<string> => {
     try {
+        const ai = getAiInstance();
         const tattooImagePart = {
             inlineData: {
                 data: tattooImageBase64,
@@ -142,6 +158,6 @@ export const generateTattooOnBodyPart = async (tattooImageBase64: string, tattoo
 
     } catch (error) {
         console.error("Error al probar el tatuaje:", error);
-        throw new Error("No se pudo generar la prueba virtual. Por favor, inténtalo de nuevo.");
+        throw error;
     }
 };
