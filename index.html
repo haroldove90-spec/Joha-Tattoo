@@ -1,23 +1,79 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Joha Tattoo - AI Designer</title>
+    <title>Joha Tatuajes - Asistente de Diseño IA</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
+      :root {
+        --background-dark: #100F15;
+        --text-dark: #EAE8FF;
+        --card-dark: #1B1A21;
+        --border-dark: #2C2A3A;
+        --primary-dark: #A162F7;
+        --primary-text-dark: #FFFFFF;
+        --secondary-text-dark: #9A97B0;
+
+        --background-light: #F5F3FF;
+        --text-light: #100F15;
+        --card-light: #FFFFFF;
+        --border-light: #D9D7E8;
+        --primary-light: #8A48E2;
+        --primary-text-light: #FFFFFF;
+        --secondary-text-light: #5A586B;
+      }
+
       body {
         font-family: 'Inter', sans-serif;
-        background-color: #111111;
-        color: #f0f0f0;
+        transition: background-color 0.3s ease, color 0.3s ease;
       }
+      
+      body.dark {
+        background-color: var(--background-dark);
+        color: var(--text-dark);
+      }
+      
+      body.light {
+        background-color: var(--background-light);
+        color: var(--text-light);
+      }
+      
       .font-cinzel {
         font-family: 'Cinzel', serif;
       }
+
+      .bg-app { background-color: var(--background); }
+      .text-main { color: var(--text); }
+      .text-secondary { color: var(--secondary-text); }
+      .bg-card { background-color: var(--card); }
+      .border-card { border-color: var(--border); }
+      .bg-primary { background-color: var(--primary); }
+      .text-primary { color: var(--primary); }
+      .text-primary-contrast { color: var(--primary-text); }
+
+      body.dark .bg-app { background-color: var(--background-dark); }
+      body.dark .text-main { color: var(--text-dark); }
+      body.dark .text-secondary { color: var(--secondary-text-dark); }
+      body.dark .bg-card { background-color: var(--card-dark); }
+      body.dark .border-card { border-color: var(--border-dark); }
+      body.dark .bg-primary { background-color: var(--primary-dark); }
+      body.dark .text-primary { color: var(--primary-dark); }
+      body.dark .text-primary-contrast { color: var(--primary-text-dark); }
+
+      body.light .bg-app { background-color: var(--background-light); }
+      body.light .text-main { color: var(--text-light); }
+      body.light .text-secondary { color: var(--secondary-text-light); }
+      body.light .bg-card { background-color: var(--card-light); }
+      body.light .border-card { border-color: var(--border-light); }
+      body.light .bg-primary { background-color: var(--primary-light); }
+      body.light .text-primary { color: var(--primary-light); }
+      body.light .text-primary-contrast { color: var(--primary-text-light); }
+
     </style>
   <script type="importmap">
 {

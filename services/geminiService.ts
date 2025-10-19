@@ -1,34 +1,18 @@
 import { GoogleGenAI, Modality } from "@google/genai";
 
-const getAi = () => {
-    if (!process.env.API_KEY) {
-        throw new Error("API_KEY environment variable not set");
-    }
-    return new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Ensure the API key is available from environment variables
+if (!process.env.API_KEY) {
+  throw new Error("La variable de entorno API_KEY no está configurada");
 }
 
-export const getTattooTip = async (): Promise<string> => {
-    try {
-        const ai = getAi();
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-pro',
-            contents: 'Give one concise, actionable tip for an aspiring tattoo artist named Johana. Focus on art, technique, or client relations. Keep it under 50 words.',
-            config: {
-                systemInstruction: "You are a world-renowned tattoo master, offering a piece of daily wisdom. Your tone is wise, encouraging, and professional.",
-            },
-        });
-        return response.text;
-    } catch (error) {
-        console.error("Error fetching tattoo tip:", error);
-        return "Couldn't fetch a tip right now. Focus on clean lines and solid composition today!";
-    }
-}
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
+/**
+ * Generates a tattoo design image from a text prompt.
+ */
 export const generateTattooFromPrompt = async (prompt: string): Promise<string> => {
   try {
-    const ai = getAi();
-    const fullPrompt = `High-quality, professional tattoo design of ${prompt}. Minimalist, clean black lines, high contrast, on a plain white background.`;
-    
+    const fullPrompt = `Un diseño de tatuaje minimalista, limpio, en blanco y negro de ${prompt}. El diseño debe estar sobre un fondo blanco liso, adecuado para una plantilla.`;
     const response = await ai.models.generateImages({
         model: 'imagen-4.0-generate-001',
         prompt: fullPrompt,
@@ -43,34 +27,56 @@ export const generateTattooFromPrompt = async (prompt: string): Promise<string> 
       const base64ImageBytes: string = response.generatedImages[0].image.imageBytes;
       return `data:image/png;base64,${base64ImageBytes}`;
     } else {
-      throw new Error("No image was generated. Please try a different prompt.");
+      throw new Error("No se generó ninguna imagen.");
     }
   } catch (error) {
-    console.error("Error generating tattoo design:", error);
-    if (error instanceof Error) {
-        return Promise.reject(error.message);
-    }
-    return Promise.reject("An unknown error occurred while generating the design.");
+    console.error("Error al generar el diseño del tatuaje:", error);
+    throw new Error("No se pudo generar el diseño del tatuaje. Por favor, inténtalo de nuevo.");
   }
 };
 
-
-export const generateStencil = async (base64Image: string, mimeType: string): Promise<string> => {
+/**
+ * Gets a random tattoo-related tip of the day.
+ */
+export const getTattooTip = async (): Promise<string> => {
     try {
-        const ai = getAi();
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: 'Dame un consejo corto, interesante y útil para Johana, una aprendiz de tatuadora, para que se convierta en una experta. Solo una frase o dos.',
+            config: {
+              systemInstruction: "Eres un maestro tatuador experimentado que da consejos a un aprendiz."
+            }
+        });
+        return response.text;
+    } catch (error) {
+        console.error("Error al obtener el consejo sobre tatuajes:", error);
+        throw new Error("No se pudo obtener un consejo. Por favor, inténtalo de nuevo.");
+    }
+};
+
+
+/**
+ * Converts a tattoo image into a stencil/trace.
+ * @param base64ImageData The base64 encoded string of the source image.
+ * @param mimeType The MIME type of the source image.
+ */
+export const createTattooTrace = async (base64ImageData: string, mimeType: string): Promise<string> => {
+    try {
         const imagePart = {
             inlineData: {
-                data: base64Image,
+                data: base64ImageData,
                 mimeType: mimeType,
             },
         };
         const textPart = {
-            text: "Create a clean, black and white, line-art stencil from this image. The output should be suitable for a tattoo trace. Capture the main contours and details with precise black lines on a pure white background. Remove all shading and color."
+            text: "Crea una plantilla de arte lineal (stencil), limpia, en blanco y negro, de este diseño de tatuaje. El resultado debe contener solo las líneas negras sobre un fondo transparente, adecuado para calcar.",
         };
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash-image',
-            contents: { parts: [imagePart, textPart] },
+            contents: {
+                parts: [imagePart, textPart],
+            },
             config: {
                 responseModalities: [Modality.IMAGE],
             },
@@ -82,57 +88,59 @@ export const generateStencil = async (base64Image: string, mimeType: string): Pr
                 return `data:image/png;base64,${base64ImageBytes}`;
             }
         }
-        throw new Error("No stencil image was generated.");
+        throw new Error("No se generó ninguna imagen de plantilla.");
 
     } catch (error) {
-        console.error("Error generating stencil:", error);
-        if (error instanceof Error) {
-            return Promise.reject(error.message);
-        }
-        return Promise.reject("An unknown error occurred while generating the stencil.");
+        console.error("Error al crear el trazo del tatuaje:", error);
+        throw new Error("No se pudo crear la plantilla. Por favor, inténtalo de nuevo.");
     }
-}
+};
 
-export const tryOnTattoo = async (tattooBase64: string, bodyPartBase64: string, tattooMimeType: string, bodyPartMimeType: string): Promise<string> => {
-     try {
-        const ai = getAi();
-        const bodyPartImage = {
+/**
+ * Virtually tries on a tattoo on a user-provided image.
+ * @param userImageBase64 The base64 encoded string of the user's photo (e.g., an arm).
+ * @param userImageMimeType The MIME type of the user's photo.
+ * @param tattooImageBase64 The base64 encoded string of the tattoo design.
+ * @param tattooImageMimeType The MIME type of the tattoo design.
+ */
+export const tryOnTattoo = async (userImageBase64: string, userImageMimeType: string, tattooImageBase64: string, tattooImageMimeType: string): Promise<string> => {
+    try {
+        const userImagePart = {
             inlineData: {
-                data: bodyPartBase64,
-                mimeType: bodyPartMimeType,
+                data: userImageBase64,
+                mimeType: userImageMimeType,
             },
         };
-        const tattooImage = {
+        const tattooImagePart = {
             inlineData: {
-                data: tattooBase64,
-                mimeType: tattooMimeType,
+                data: tattooImageBase64,
+                mimeType: tattooImageMimeType,
             },
         };
         const textPart = {
-            text: "Realistically place the second image (the tattoo) onto the skin in the first image (the body part). Adjust for the body's contours, lighting, and skin texture. The final image should look like a photograph of a person with the tattoo."
+            text: "Coloca de forma realista la segunda imagen (el diseño del tatuaje) sobre la primera imagen (la piel de la persona). Ajusta la perspectiva, la iluminación y la textura de la piel. El tatuaje debe parecer que está realmente en la piel.",
         };
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash-image',
-            contents: { parts: [bodyPartImage, tattooImage, textPart] },
+            contents: {
+                parts: [userImagePart, tattooImagePart, textPart],
+            },
             config: {
                 responseModalities: [Modality.IMAGE],
             },
         });
-        
+
         for (const part of response.candidates[0].content.parts) {
             if (part.inlineData) {
                 const base64ImageBytes: string = part.inlineData.data;
                 return `data:image/png;base64,${base64ImageBytes}`;
             }
         }
-        throw new Error("Could not generate a preview.");
+        throw new Error("No se generó ninguna imagen de prueba.");
 
     } catch (error) {
-        console.error("Error generating tattoo preview:", error);
-        if (error instanceof Error) {
-            return Promise.reject(error.message);
-        }
-        return Promise.reject("An unknown error occurred while generating the preview.");
+        console.error("Error al probar el tatuaje:", error);
+        throw new Error("No se pudo generar la prueba virtual. Por favor, inténtalo de nuevo.");
     }
-}
+};
