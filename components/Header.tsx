@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 
 const TattooIcon = () => (
@@ -26,7 +25,10 @@ const Header: React.FC = () => {
     }, [scrolled]);
     
     const navLinks = [
-        { href: '#designer', text: 'Designer' },
+        { href: '#designer', text: 'AI Designer' },
+        { href: '#trace', text: 'Create Stencil' },
+        { href: '#try-on', text: 'Try On' },
+        { href: '#gallery', text: 'Gallery' },
         { href: '#portfolio', text: 'Portfolio' },
         { href: '#about', text: 'About' },
         { href: '#contact', text: 'Contact' }
