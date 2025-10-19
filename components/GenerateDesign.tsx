@@ -7,7 +7,7 @@ const GenerateDesign: React.FC = () => {
     const [generatedImage, setGeneratedImage] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [isSaved, setIsSaved] = useState(false);
+    const [saveSuccess, setSaveSuccess] = useState(false);
 
     const handleGenerate = async () => {
         if (!prompt.trim()) {
@@ -17,25 +17,24 @@ const GenerateDesign: React.FC = () => {
         setIsLoading(true);
         setError(null);
         setGeneratedImage(null);
-        setIsSaved(false);
+        setSaveSuccess(false);
 
         try {
             const imageUrl = await generateTattooFromPrompt(prompt);
             setGeneratedImage(imageUrl);
+
+            // Auto-save to gallery
+            const gallery = JSON.parse(localStorage.getItem('tattooGallery') || '[]');
+            gallery.unshift(imageUrl); // Add to the beginning of the array
+            localStorage.setItem('tattooGallery', JSON.stringify(gallery));
+            window.dispatchEvent(new Event('storage')); // Notify other components
+            setSaveSuccess(true);
+
         } catch (err: any) {
             setError(err.toString() || 'No se pudo generar el diseño. Por favor, inténtalo de nuevo.');
         } finally {
             setIsLoading(false);
         }
-    };
-
-    const handleSaveToGallery = () => {
-        if (!generatedImage) return;
-        const gallery = JSON.parse(localStorage.getItem('tattooGallery') || '[]');
-        gallery.unshift(generatedImage);
-        localStorage.setItem('tattooGallery', JSON.stringify(gallery));
-        setIsSaved(true);
-        window.dispatchEvent(new Event('storage'));
     };
 
     const suggestionPills = ["Un león majestuoso con corona floral", "Silueta de lobo geométrico", "Pez koi estilo japonés", "Rosa minimalista de una línea"];
@@ -81,13 +80,11 @@ const GenerateDesign: React.FC = () => {
                         <div className="bg-white p-2 rounded-lg shadow-2xl shadow-primary/20">
                              <img src={generatedImage} alt="Diseño de tatuaje generado" className="w-72 h-72 object-cover rounded-md"/>
                         </div>
-                        <button
-                            onClick={handleSaveToGallery}
-                            disabled={isSaved}
-                            className="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 transition duration-300 disabled:bg-gray-500 disabled:cursor-not-allowed"
-                        >
-                            {isSaved ? '✓ Guardado' : 'Guardar en Galería'}
-                        </button>
+                        {saveSuccess && (
+                            <p className="text-green-400 font-semibold text-sm bg-green-900/30 px-4 py-2 rounded-full">
+                                ✓ ¡Guardado en tu galería!
+                            </p>
+                        )}
                     </div>
                 )}
             </div>

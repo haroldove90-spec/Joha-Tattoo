@@ -1,4 +1,4 @@
-import { GoogleGenAI, Modality } from "@google/genai";
+import { GoogleGenAI, Modality, Chat } from "@google/genai";
 
 // Ensure the API key is available from environment variables
 if (!process.env.API_KEY) {
@@ -6,6 +6,19 @@ if (!process.env.API_KEY) {
 }
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+/**
+ * Creates and returns a new chat session configured to act as a tattoo master mentor.
+ */
+export const createAssistantChat = (): Chat => {
+    const chat = ai.chats.create({
+        model: 'gemini-2.5-pro', // Using a more advanced model for expert advice
+        config: {
+            systemInstruction: "Eres un 'Maestro Tatuador', un mentor experto para Johana, una aprendiz de tatuadora. Tu tono es sabio, profesional y alentador. Ofrece consejos detallados sobre técnicas de tatuaje, seguridad, higiene, diseño, y cómo tratar con los clientes. Responde siempre desde esta perspectiva."
+        }
+    });
+    return chat;
+};
 
 /**
  * Generates a tattoo design image from a text prompt.
@@ -97,20 +110,13 @@ export const createTattooTrace = async (base64ImageData: string, mimeType: strin
 };
 
 /**
- * Virtually tries on a tattoo on a user-provided image.
- * @param userImageBase64 The base64 encoded string of the user's photo (e.g., an arm).
- * @param userImageMimeType The MIME type of the user's photo.
+ * Generates a realistic image of a tattoo on a specified body part.
  * @param tattooImageBase64 The base64 encoded string of the tattoo design.
  * @param tattooImageMimeType The MIME type of the tattoo design.
+ * @param bodyPart The name of the body part (e.g., 'Brazo', 'Espalda').
  */
-export const tryOnTattoo = async (userImageBase64: string, userImageMimeType: string, tattooImageBase64: string, tattooImageMimeType: string): Promise<string> => {
+export const generateTattooOnBodyPart = async (tattooImageBase64: string, tattooImageMimeType: string, bodyPart: string): Promise<string> => {
     try {
-        const userImagePart = {
-            inlineData: {
-                data: userImageBase64,
-                mimeType: userImageMimeType,
-            },
-        };
         const tattooImagePart = {
             inlineData: {
                 data: tattooImageBase64,
@@ -118,13 +124,13 @@ export const tryOnTattoo = async (userImageBase64: string, userImageMimeType: st
             },
         };
         const textPart = {
-            text: "Coloca de forma realista la segunda imagen (el diseño del tatuaje) sobre la primera imagen (la piel de la persona). Ajusta la perspectiva, la iluminación y la textura de la piel. El tatuaje debe parecer que está realmente en la piel.",
+            text: `Genera una foto de estudio, fotorrealista y de alta calidad de un/una ${bodyPart} de una persona. La piel debe tener una textura natural. Sobre esta piel, aplica la imagen del tatuaje proporcionada, integrándola perfectamente. Asegúrate de que el tatuaje siga los contornos del cuerpo y que la iluminación y las sombras del tatuaje coincidan con la iluminación de la foto para que parezca completamente real. El resultado debe ser solo la imagen fotorrealista.`,
         };
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash-image',
             contents: {
-                parts: [userImagePart, tattooImagePart, textPart],
+                parts: [tattooImagePart, textPart],
             },
             config: {
                 responseModalities: [Modality.IMAGE],

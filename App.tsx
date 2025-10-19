@@ -5,8 +5,10 @@ import Gallery from './components/Gallery';
 import GenerateDesign from './components/GenerateDesign';
 import CreateTrace from './components/CreateTrace';
 import TryOnTattoo from './components/TryOnTattoo';
-import Placeholder from './components/Placeholder';
+import Agenda from './components/Agenda';
+import Clients from './components/Clients';
 import BottomNav from './components/BottomNav';
+import Assistant from './components/Assistant';
 
 export type View = 'home' | 'gallery' | 'agenda' | 'clients' | 'assistant' | 'generate' | 'trace' | 'try-on';
 
@@ -35,11 +37,11 @@ const App: React.FC = () => {
       case 'try-on':
         return <TryOnTattoo />;
       case 'agenda':
-        return <Placeholder title="Agenda" icon="📅" message="Aquí podrás gestionar tus citas y calendarios." />;
+        return <Agenda />;
       case 'clients':
-        return <Placeholder title="Clientes" icon="👥" message="Gestiona la información y el historial de tus clientes." />;
+        return <Clients />;
       case 'assistant':
-        return <Placeholder title="Asistente" icon="💡" message="Tu asistente de IA personal para ayudarte con ideas y gestión." />;
+        return <Assistant />;
       default:
         return <Home setView={setView} />;
     }
@@ -48,12 +50,25 @@ const App: React.FC = () => {
   const isFullScreenView = ['generate', 'trace', 'try-on'].includes(view);
   const showHeader = view !== 'home' && !isFullScreenView;
 
+  const getTitleForView = (view: View) => {
+    switch(view) {
+      case 'gallery': return 'Galería';
+      case 'agenda': return 'Agenda';
+      case 'clients': return 'Clientes';
+      case 'assistant': return 'Asistente';
+      case 'generate': return 'Generar Diseño';
+      case 'trace': return 'Crear Trazo';
+      case 'try-on': return 'Prueba Virtual';
+      default: return '';
+    }
+  }
+
   return (
     <div className="bg-app text-main min-h-screen font-sans flex flex-col">
       {view === 'home' ? (
          <Header isHome={true} currentTheme={theme} toggleTheme={toggleTheme} />
       ) : (
-         <Header isHome={false} currentTheme={theme} toggleTheme={toggleTheme} setView={setView} title={view.charAt(0).toUpperCase() + view.slice(1)} />
+         <Header isHome={false} currentTheme={theme} toggleTheme={toggleTheme} setView={setView} title={getTitleForView(view)} />
       )}
       <main className="flex-grow container mx-auto px-4 pb-24">
         {renderView()}

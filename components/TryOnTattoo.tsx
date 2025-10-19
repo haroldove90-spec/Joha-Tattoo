@@ -1,27 +1,24 @@
 import React, { useState } from 'react';
 import Loader from './Loader';
-import { tryOnTattoo } from '../services/geminiService';
+import { generateTattooOnBodyPart } from '../services/geminiService';
 
 const TryOnTattoo: React.FC = () => {
-    const [userImage, setUserImage] = useState<string | null>(null);
     const [tattooImage, setTattooImage] = useState<string | null>(null);
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [userFile, setUserFile] = useState<File | null>(null);
     const [tattooFile, setTattooFile] = useState<File | null>(null);
+    const [selectedBodyPart, setSelectedBodyPart] = useState<string | null>(null);
 
-    const handleFileChange = (type: 'user' | 'tattoo') => (event: React.ChangeEvent<HTMLInputElement>) => {
+    const bodyParts = ['Brazo', 'Mano', 'Espalda', 'Pierna', 'Pantorrilla', 'Cuello', 'Pecho', 'Hombro'];
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
-            if (type === 'user') setUserFile(file);
-            if (type === 'tattoo') setTattooFile(file);
-            
+            setTattooFile(file);
             const reader = new FileReader();
             reader.onload = (e) => {
-                const imageUrl = e.target?.result as string;
-                if (type === 'user') setUserImage(imageUrl);
-                if (type === 'tattoo') setTattooImage(imageUrl);
+                setTattooImage(e.target?.result as string);
                 setResultImage(null);
                 setError(null);
             };
@@ -38,8 +35,8 @@ const TryOnTattoo: React.FC = () => {
         });
 
     const handleGenerate = async () => {
-        if (!userFile || !tattooFile) {
-            setError('Por favor, sube ambas imágenes.');
+        if (!tattooFile || !selectedBodyPart) {
+            setError('Por favor, sube un diseño y selecciona una parte del cuerpo.');
             return;
         }
         setIsLoading(true);
@@ -47,9 +44,8 @@ const TryOnTattoo: React.FC = () => {
         setResultImage(null);
 
         try {
-            const userBase64 = await toBase64(userFile);
             const tattooBase64 = await toBase64(tattooFile);
-            const resultUrl = await tryOnTattoo(userBase64, userFile.type, tattooBase64, tattooFile.type);
+            const resultUrl = await generateTattooOnBodyPart(tattooBase64, tattooFile.type, selectedBodyPart);
             setResultImage(resultUrl);
         } catch (err: any) {
             setError(err.toString() || 'No se pudo generar la prueba. Por favor, inténtalo de nuevo.');
@@ -57,40 +53,52 @@ const TryOnTattoo: React.FC = () => {
             setIsLoading(false);
         }
     };
-    
-    const FileInput = ({ id, label, image, onChange }: { id: string, label: string, image: string | null, onChange: React.ChangeEventHandler<HTMLInputElement>}) => (
-        <div className="flex-1 bg-card border-2 border-dashed border-border-card rounded-lg p-4 text-center flex flex-col justify-center items-center min-h-[150px]">
-            <label htmlFor={id} className="cursor-pointer text-primary hover:opacity-80 font-semibold mb-2">
-                {label}
-            </label>
-            <input id={id} type="file" accept="image/*" onChange={onChange} className="hidden" />
-            {image ? (
-                 <img src={image} alt={label} className="max-h-24 rounded mt-2"/>
-            ) : (
-                <p className="text-secondary text-xs">Sube una imagen</p>
-            )}
-        </div>
-    );
 
     return (
         <div className="py-8">
              <div className="text-center">
                 <h1 className="text-3xl font-bold font-cinzel text-main mb-2">Prueba Virtual</h1>
-                <p className="text-secondary mb-8">Visualiza cómo te quedaría un tatuaje antes de decidirte.</p>
+                <p className="text-secondary mb-8 max-w-2xl mx-auto">Sube un diseño, elige una parte del cuerpo y deja que la IA cree una vista previa fotorrealista.</p>
             </div>
-            <div className="max-w-2xl mx-auto">
-                <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                    <FileInput id="user-upload" label="Sube tu Foto" image={userImage} onChange={handleFileChange('user')} />
-                    <FileInput id="tattoo-upload" label="Sube el Diseño" image={tattooImage} onChange={handleFileChange('tattoo')} />
+            <div className="max-w-3xl mx-auto">
+                {/* Step 1: Upload Design */}
+                <div className="mb-6">
+                    <h2 className="font-bold text-main mb-2">Paso 1: Sube el Diseño del Tatuaje</h2>
+                    <div className="bg-card border-2 border-dashed border-border-card rounded-lg p-6 text-center">
+                        <label htmlFor="tattoo-upload" className="cursor-pointer bg-primary text-primary-contrast font-semibold py-2 px-4 rounded-md hover:opacity-90 transition-opacity">
+                            {tattooImage ? 'Cambiar Diseño' : 'Seleccionar Diseño'}
+                        </label>
+                        <input id="tattoo-upload" type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+                        {tattooImage && <img src={tattooImage} alt="Diseño de tatuaje" className="mx-auto max-h-24 rounded mt-4 bg-white p-1"/>}
+                    </div>
                 </div>
 
-                {userImage && tattooImage && (
-                    <div className="text-center mt-6">
+                {/* Step 2: Select Body Part */}
+                {tattooImage && (
+                    <div className="mb-6">
+                         <h2 className="font-bold text-main mb-3">Paso 2: Elige la Parte del Cuerpo</h2>
+                         <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                            {bodyParts.map(part => (
+                                <button
+                                    key={part}
+                                    onClick={() => setSelectedBodyPart(part)}
+                                    className={`p-3 rounded-lg border-2 transition-all duration-200 text-center font-semibold ${selectedBodyPart === part ? 'bg-primary border-primary text-primary-contrast' : 'bg-card border-border-card hover:border-primary'}`}
+                                >
+                                    {part}
+                                </button>
+                            ))}
+                         </div>
+                    </div>
+                )}
+
+                {/* Step 3: Generate */}
+                {tattooImage && selectedBodyPart && (
+                    <div className="text-center mt-8">
                         <button 
                             onClick={handleGenerate}
                             disabled={isLoading}
-                             className="w-full bg-primary text-primary-contrast font-bold py-3 px-8 rounded-lg hover:opacity-90 transition-opacity duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
-                                {isLoading ? 'Aplicando...' : 'Probar Tatuaje'}
+                             className="w-full max-w-md mx-auto bg-primary text-primary-contrast font-bold py-3 px-8 rounded-lg hover:opacity-90 transition-opacity duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+                                {isLoading ? 'Generando...' : `Probar en ${selectedBodyPart}`}
                         </button>
                     </div>
                 )}
@@ -101,14 +109,14 @@ const TryOnTattoo: React.FC = () => {
                     {resultImage && (
                          <div className="text-center">
                             <h3 className="text-xl font-cinzel mb-4">¡Aquí tienes tu prueba virtual!</h3>
-                            <img src={resultImage} alt="Resultado de la prueba virtual" className="mx-auto max-h-80 rounded"/>
-                             <a href={resultImage} download="johana-tatuajes-prueba.png" className="inline-block mt-4 bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 transition">
+                            <img src={resultImage} alt="Resultado de la prueba virtual" className="mx-auto max-h-80 rounded shadow-lg"/>
+                             <a href={resultImage} download={`johana-tatuajes-prueba-${selectedBodyPart}.png`} className="inline-block mt-4 bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 transition">
                                 Descargar Imagen
                             </a>
                         </div>
                     )}
                      {!resultImage && !isLoading && !error && (
-                        <p className="text-secondary">El resultado aparecerá aquí.</p>
+                        <p className="text-secondary">El resultado fotorrealista aparecerá aquí.</p>
                     )}
                 </div>
             </div>
