@@ -1,36 +1,67 @@
-// A basic service worker for PWA functionality
+// A more robust service worker for PWA functionality
 
-const CACHE_NAME = 'joha-tattoo-cache-v1';
-// Add assets that should be cached for offline use.
-// This list should be expanded as the app grows.
+const CACHE_NAME = 'joha-tattoo-cache-v2';
+// These are the files the app needs to start.
+// Additional assets will be cached on demand by the fetch handler.
 const urlsToCache = [
   '/',
   '/index.html',
-  // You would typically add your bundled JS/CSS files here
-  // For this setup, we'll keep it simple.
+  '/manifest.json',
+  '/icon.svg',
+  '/index.tsx', // The main script
 ];
 
+// Install event: open cache and add core files
 self.addEventListener('install', (event) => {
-  // Perform install steps
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
         console.log('Opened cache');
         return cache.addAll(urlsToCache);
       })
+      .catch(err => {
+          console.error('Cache addAll failed:', err);
+      })
   );
 });
 
+// Activate event: clean up old caches
+self.addEventListener('activate', (event) => {
+  const cacheWhitelist = [CACHE_NAME];
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheWhitelist.indexOf(cacheName) === -1) {
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+});
+
+// Fetch event: serve from cache, fall back to network, and update cache (stale-while-revalidate)
 self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') {
+    return;
+  }
+  
   event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Cache hit - return response
-        if (response) {
-          return response;
+    caches.match(event.request).then((cachedResponse) => {
+      const fetchPromise = fetch(event.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
         }
-        return fetch(event.request);
-      }
-    )
+        return networkResponse;
+      });
+
+      // Return cached response if available, otherwise wait for fetch.
+      // This allows the app to work offline and updates the cache in the background.
+      return cachedResponse || fetchPromise;
+    })
   );
 });
