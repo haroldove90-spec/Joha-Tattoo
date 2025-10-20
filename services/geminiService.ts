@@ -1,3 +1,5 @@
+
+
 import { GoogleGenAI, Modality, Chat } from "@google/genai";
 
 /**
@@ -18,7 +20,7 @@ export const createAssistantChat = (): Chat => {
     const chat = ai.chats.create({
         model: 'gemini-2.5-pro', // Using a more advanced model for expert advice
         config: {
-            systemInstruction: "Eres un 'Maestro Tatuador', un mentor experto para Johana, una aprendiz de tatuadora. Tu tono es sabio, profesional y alentador. Ofrece consejos detallados sobre técnicas de tatuaje, seguridad, higiene, diseño, y cómo tratar con los clientes. Responde siempre desde esta perspectiva."
+            systemInstruction: "Eres un 'Maestro Tatuador', un mentor experto para un aprendiz de tatuador. Tu tono es sabio, profesional y alentador. Ofrece consejos detallados sobre técnicas de tatuaje, seguridad, higiene, diseño, y cómo tratar con los clientes. Responde siempre desde esta perspectiva."
         }
     });
     return chat;
@@ -54,21 +56,33 @@ export const generateTattooFromPrompt = async (prompt: string): Promise<string> 
 };
 
 /**
- * Gets a random tattoo-related tip of the day.
+ * Gets a random tattoo-related tip of the day with a retry mechanism.
  */
-export const getTattooTip = async (): Promise<string> => {
+export const getTattooTip = async (retries = 3, delay = 500): Promise<string> => {
     try {
         const ai = getAiInstance();
+        const prompt = 'Genera un consejo único y motivador para una aprendiz de tatuadora. El consejo debe ser conciso, de una o dos frases, y cubrir temas como técnica, trato con el cliente, o crecimiento artístico. Ejemplo: "La confianza en tu trazo se construye con cada línea que practicas, no solo en la piel, sino en papel.". Asegúrate de dar siempre una respuesta con un consejo.';
+
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
-            contents: 'Dame un consejo corto, interesante y útil para Johana, una aprendiz de tatuadora, para que se convierta en una experta. Solo una frase o dos.',
+            contents: prompt,
             config: {
-              systemInstruction: "Eres un maestro tatuador experimentado que da consejos a un aprendiz."
+              systemInstruction: "Eres un maestro tatuador experimentado que da consejos a un aprendiz. Tu tono es sabio y alentador."
             }
         });
+
+        if (!response.text || response.text.trim() === '') {
+            throw new Error("La respuesta de la API estaba vacía.");
+        }
+        
         return response.text;
     } catch (error) {
-        console.error("Error al obtener el consejo sobre tatuajes:", error);
+        console.error(`Error al obtener el consejo sobre tatuajes (intentos restantes: ${retries - 1}):`, error);
+        if (retries > 1) {
+            await new Promise(res => setTimeout(res, delay));
+            return getTattooTip(retries - 1, delay * 2);
+        }
+        console.error("Todos los intentos para obtener el consejo del día han fallado.");
         throw error;
     }
 };
@@ -157,4 +171,117 @@ export const generateTattooOnBodyPart = async (tattooImageBase64: string, tattoo
         console.error("Error al probar el tatuaje:", error);
         throw error;
     }
+};
+
+// =============================================
+// IndexedDB Database Service
+// =============================================
+
+type Appointment = {
+  id: string;
+  clientName: string;
+  phone: string;
+  tattooType: string;
+  date: string;
+  time: string;
+};
+
+type Sale = {
+    id: string;
+    amount: number;
+    date: string;
+};
+
+export type GalleryItem = {
+    id: number;
+    base64: string;
+};
+
+const DB_NAME = 'soulPatternsDB';
+const DB_VERSION = 1;
+let dbPromise: Promise<IDBDatabase> | null = null;
+
+const getDB = (): Promise<IDBDatabase> => {
+    if (dbPromise) {
+        return dbPromise;
+    }
+    dbPromise = new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+        request.onupgradeneeded = (event) => {
+            const db = (event.target as IDBOpenDBRequest).result;
+            if (!db.objectStoreNames.contains('gallery')) {
+                db.createObjectStore('gallery', { keyPath: 'id', autoIncrement: true });
+            }
+            if (!db.objectStoreNames.contains('appointments')) {
+                db.createObjectStore('appointments', { keyPath: 'id' });
+            }
+            if (!db.objectStoreNames.contains('sales')) {
+                db.createObjectStore('sales', { keyPath: 'id' });
+            }
+        };
+    });
+    return dbPromise;
+};
+
+const promisifyRequest = <T>(request: IDBRequest<T>): Promise<T> => {
+    return new Promise((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+};
+
+// Gallery functions
+export const addGalleryItem = async (base64: string): Promise<number> => {
+    const db = await getDB();
+    const tx = db.transaction('gallery', 'readwrite');
+    const store = tx.objectStore('gallery');
+    const request = store.add({ base64 });
+    // Fix: Explicitly type the result of the promisified request to number, as the gallery uses an auto-incrementing key.
+    return promisifyRequest(request as IDBRequest<number>);
+};
+
+export const getGalleryItems = async (): Promise<GalleryItem[]> => {
+    const db = await getDB();
+    const items = await promisifyRequest(db.transaction('gallery').objectStore('gallery').getAll());
+    return items.reverse();
+};
+
+export const deleteGalleryItem = async (id: number): Promise<void> => {
+    const db = await getDB();
+    const tx = db.transaction('gallery', 'readwrite');
+    await promisifyRequest(tx.objectStore('gallery').delete(id));
+};
+
+// Appointment functions
+export const saveAppointment = async (appointment: Appointment): Promise<string> => {
+    const db = await getDB();
+    const tx = db.transaction('appointments', 'readwrite');
+    // Fix: Explicitly type the result of the promisified request to string to match the Appointment's ID type.
+    return promisifyRequest(tx.objectStore('appointments').put(appointment) as IDBRequest<string>);
+};
+
+export const getAppointments = async (): Promise<Appointment[]> => {
+    const db = await getDB();
+    return promisifyRequest(db.transaction('appointments').objectStore('appointments').getAll());
+};
+
+export const deleteAppointment = async (id: string): Promise<void> => {
+    const db = await getDB();
+    const tx = db.transaction('appointments', 'readwrite');
+    await promisifyRequest(tx.objectStore('appointments').delete(id));
+};
+
+// Sales functions
+export const saveSale = async (sale: Sale): Promise<string> => {
+    const db = await getDB();
+    const tx = db.transaction('sales', 'readwrite');
+    // Fix: Explicitly type the result of the promisified request to string to match the Sale's ID type.
+    return promisifyRequest(tx.objectStore('sales').put(sale) as IDBRequest<string>);
+};
+
+export const getSales = async (): Promise<Sale[]> => {
+    const db = await getDB();
+    return promisifyRequest(db.transaction('sales').objectStore('sales').getAll());
 };

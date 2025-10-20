@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import useLocalStorage from '../hooks/useLocalStorage';
+import React, { useState, useMemo, useEffect } from 'react';
+import { getAppointments, saveAppointment, deleteAppointment } from '../services/geminiService';
 
 type Appointment = {
   id: string;
@@ -11,11 +11,20 @@ type Appointment = {
 };
 
 const Agenda: React.FC = () => {
-    const [appointments, setAppointments] = useLocalStorage<Appointment[]>('appointments', []);
+    const [appointments, setAppointments] = useState<Appointment[]>([]);
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
+    const [showSaveConfirmation, setShowSaveConfirmation] = useState<Appointment | null>(null);
+
+    useEffect(() => {
+        const loadAppointments = async () => {
+            const data = await getAppointments();
+            setAppointments(data);
+        };
+        loadAppointments();
+    }, []);
 
     const appointmentsByDate = useMemo(() => {
         return appointments.reduce((acc, app) => {
@@ -41,9 +50,65 @@ const Agenda: React.FC = () => {
         setIsModalOpen(true);
     };
 
-    const handleDelete = (id: string) => {
+    const handleDelete = async (id: string) => {
         if (window.confirm('¿Estás seguro de que quieres eliminar esta cita?')) {
+            await deleteAppointment(id);
             setAppointments(apps => apps.filter(app => app.id !== id));
+        }
+    };
+    
+    const handleAppointmentSaved = (app: Appointment) => {
+        // Optimistically update UI
+        if (editingAppointment) {
+            setAppointments(apps => apps.map(a => a.id === app.id ? app : a));
+        } else {
+            setAppointments(apps => [...apps, app]);
+        }
+        setShowSaveConfirmation(app);
+        setTimeout(() => setShowSaveConfirmation(null), 10000); // Hide after 10 seconds
+    };
+
+    const generateIcsFile = (appointment: Appointment) => {
+        const startDate = new Date(`${appointment.date}T${appointment.time}`);
+        const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // Assume 1 hour duration
+
+        const toUTC = (date: Date) => date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+
+        const icsContent = [
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            'BEGIN:VEVENT',
+            `UID:${appointment.id}@soul.patterns`,
+            `DTSTAMP:${toUTC(new Date())}`,
+            `DTSTART:${toUTC(startDate)}`,
+            `DTEND:${toUTC(endDate)}`,
+            `SUMMARY:Cita de Tatuaje: ${appointment.clientName}`,
+            `DESCRIPTION:Detalles: ${appointment.tattooType}. Contacto: ${appointment.phone}`,
+            'END:VEVENT',
+            'END:VCALENDAR'
+        ].join('\r\n');
+
+        const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `cita-tatuaje-${appointment.clientName}.ics`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
+    const showConfirmationNotification = async (appointment: Appointment) => {
+        if ('Notification' in window && Notification.permission !== 'denied') {
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                new Notification('¡Cita Agendada!', {
+                    body: `Tu cita con ${appointment.clientName} ha sido confirmada. Se añadió un recordatorio a tu calendario.`,
+                    icon: '/icon-192x192.png',
+                    badge: '/icon-192x192.png'
+                });
+            }
         }
     };
     
@@ -95,20 +160,48 @@ const Agenda: React.FC = () => {
                     </div>
                     <div className="space-y-3">
                         {selectedDayAppointments.length > 0 ? (
-                            selectedDayAppointments.sort((a,b) => a.time.localeCompare(b.time)).map(app => (
-                                <div key={app.id} className="bg-card border border-border-card rounded-lg p-3">
+                            selectedDayAppointments.sort((a, b) => a.time.localeCompare(b.time)).map(app => (
+                                <div key={app.id} className="bg-card border border-border-card rounded-lg p-4 space-y-3">
                                     <div className="flex justify-between items-start">
                                         <div>
                                             <p className="font-bold text-main">{app.clientName}</p>
                                             <p className="text-sm text-secondary">{app.tattooType}</p>
-                                            <p className="text-xs text-secondary mt-1">{app.phone}</p>
                                         </div>
-                                        <div className="text-right">
+                                        <div className="text-right flex-shrink-0 pl-4">
                                             <p className="font-bold text-primary text-lg">{app.time}</p>
-                                            <div className="flex gap-2 mt-1">
-                                                <button onClick={() => openModal(app)} className="text-xs text-blue-400 hover:underline">Editar</button>
-                                                <button onClick={() => handleDelete(app.id)} className="text-xs text-red-400 hover:underline">Borrar</button>
-                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="border-t border-border-card pt-3 flex justify-between items-center">
+                                        <p className="text-xs text-secondary">{app.phone}</p>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => generateIcsFile(app)}
+                                                className="p-2 text-secondary hover:text-primary rounded-full hover:bg-border-card transition-colors"
+                                                title="Añadir al calendario"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                                                </svg>
+                                            </button>
+                                            <button
+                                                onClick={() => openModal(app)}
+                                                className="p-2 text-secondary hover:text-primary rounded-full hover:bg-border-card transition-colors"
+                                                title="Editar cita"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                                                    <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />
+                                                </svg>
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(app.id)}
+                                                className="p-2 text-secondary hover:text-red-500 rounded-full hover:bg-border-card transition-colors"
+                                                title="Eliminar cita"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                                                </svg>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -119,12 +212,30 @@ const Agenda: React.FC = () => {
                     </div>
                 </div>
             </div>
-            {isModalOpen && <AppointmentModal appointment={editingAppointment} selectedDate={selectedDate} onClose={() => setIsModalOpen(false)} setAppointments={setAppointments} />}
+            {isModalOpen && <AppointmentModal appointment={editingAppointment} selectedDate={selectedDate} onClose={() => setIsModalOpen(false)} onSave={handleAppointmentSaved} />}
+            {showSaveConfirmation && (
+                <div className="fixed bottom-24 left-4 right-4 z-50 animate-fade-in-up bg-card border border-border-card rounded-lg shadow-2xl p-4 max-w-md mx-auto">
+                    <p className="text-main font-semibold text-center">¡Cita con {showSaveConfirmation.clientName} guardada!</p>
+                    <p className="text-sm text-secondary mb-3 text-center">Añádela a tu calendario para recibir un recordatorio.</p>
+                    <div className="flex gap-3">
+                        <button onClick={() => {
+                            generateIcsFile(showSaveConfirmation);
+                            showConfirmationNotification(showSaveConfirmation);
+                            setShowSaveConfirmation(null);
+                        }} className="w-full bg-primary text-primary-contrast font-bold py-2 px-4 rounded-lg hover:opacity-90 transition">
+                            Añadir al Calendario
+                        </button>
+                        <button onClick={() => setShowSaveConfirmation(null)} className="w-full bg-border-card text-main font-bold py-2 px-4 rounded-lg hover:opacity-80 transition">
+                            Cerrar
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
 
-const AppointmentModal = ({ appointment, selectedDate, onClose, setAppointments } : { appointment: Appointment | null, selectedDate: string, onClose: () => void, setAppointments: React.Dispatch<React.SetStateAction<Appointment[]>>}) => {
+const AppointmentModal = ({ appointment, selectedDate, onClose, onSave } : { appointment: Appointment | null, selectedDate: string, onClose: () => void, onSave: (app: Appointment) => void}) => {
     const [formData, setFormData] = useState({
         clientName: appointment?.clientName || '',
         phone: appointment?.phone || '',
@@ -138,13 +249,14 @@ const AppointmentModal = ({ appointment, selectedDate, onClose, setAppointments 
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (appointment) {
-            setAppointments(apps => apps.map(app => app.id === appointment.id ? { ...app, ...formData } : app));
-        } else {
-            setAppointments(apps => [...apps, { ...formData, id: Date.now().toString() }]);
-        }
+        const finalAppointment = appointment 
+            ? { ...appointment, ...formData } 
+            : { ...formData, id: Date.now().toString() };
+
+        await saveAppointment(finalAppointment);
+        onSave(finalAppointment);
         onClose();
     };
     

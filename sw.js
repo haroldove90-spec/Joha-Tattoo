@@ -1,6 +1,6 @@
 // A more robust service worker for PWA functionality
 
-const CACHE_NAME = 'joha-tattoo-cache-v2';
+const CACHE_NAME = 'soul-patterns-cache-v1';
 // These are the files the app needs to start.
 // Additional assets will be cached on demand by the fetch handler.
 const urlsToCache = [
@@ -9,6 +9,10 @@ const urlsToCache = [
   '/manifest.json',
   '/icon.svg',
   '/index.tsx', // The main script
+  '/apple-touch-icon.png',
+  '/icon-192x192.png',
+  '/icon-512x512.png',
+  '/icon-maskable-512x512.png'
 ];
 
 // Install event: open cache and add core files

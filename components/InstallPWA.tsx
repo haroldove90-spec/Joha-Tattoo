@@ -12,64 +12,62 @@ interface BeforeInstallPromptEvent extends Event {
 
 const InstallPWA: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [showInstallBanner, setShowInstallBanner] = useState(false);
-  const [showIosInstallBanner, setShowIosInstallBanner] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    const handler = (e: Event) => {
+    const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
-       // Only show banner if it's not an iOS device, as we have a separate banner for that.
-      const isIos = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
-      if (!isIos) {
-        setShowInstallBanner(true);
-      }
     };
-
-    window.addEventListener('beforeinstallprompt', handler);
     
-    // Logic for iOS install prompt
-    const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
-    // navigator.standalone is a non-standard property supported by Safari on iOS
-    const isInStandaloneMode = () => ('standalone' in window.navigator) && ((window.navigator as any).standalone);
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    const dismissedIosPrompt = localStorage.getItem('iosInstallDismissed') === 'true';
-
-    if (isIos() && !isInStandaloneMode() && !dismissedIosPrompt) {
-        setShowIosInstallBanner(true);
-    }
+    const timer = setTimeout(() => {
+      // Only show the banner if the app is not already installed
+      const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches;
+      if (!isInStandaloneMode) {
+        setIsVisible(true);
+      }
+    }, 3000); // 3-second delay
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      clearTimeout(timer);
     };
   }, []);
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) {
-      return;
-    }
-    setShowInstallBanner(false);
+    if (!deferredPrompt) return;
+    setIsVisible(false);
     await deferredPrompt.prompt();
     await deferredPrompt.userChoice;
     setDeferredPrompt(null);
   };
 
   const handleDismissClick = () => {
-    setShowInstallBanner(false);
+    setIsVisible(false);
   };
   
   const handleIosDismissClick = () => {
     localStorage.setItem('iosInstallDismissed', 'true');
-    setShowIosInstallBanner(false);
+    setIsVisible(false);
   };
+  
+  if (!isVisible) {
+    return null;
+  }
 
-  if (showInstallBanner) {
+  const isIos = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+  const hasDismissedIosPrompt = localStorage.getItem('iosInstallDismissed') === 'true';
+
+  // Show Android/Desktop banner if the prompt event has been captured
+  if (deferredPrompt && !isIos) {
     return (
       <div className="fixed bottom-20 sm:bottom-4 right-4 z-50 animate-fade-in-up">
         <div className="bg-card border border-border-card rounded-lg shadow-2xl p-4 max-w-sm flex items-center gap-4">
-          <img src="/icon.svg" alt="Joha Tattoo Icon" className="h-12 w-12" />
+          <img src="/icon.svg" alt="Soul Patterns Icon" className="h-12 w-12" />
           <div>
-            <h3 className="font-bold text-main">Instalar Joha Tattoo</h3>
+            <h3 className="font-bold text-main">Instalar Soul Patterns</h3>
             <p className="text-sm text-secondary">Acceso rápido a tus diseños y agenda desde tu pantalla de inicio.</p>
             <div className="flex gap-2 mt-3">
               <button
@@ -91,11 +89,12 @@ const InstallPWA: React.FC = () => {
     );
   }
 
-  if (showIosInstallBanner) {
+  // Show iOS banner if it's an iOS device and the user hasn't dismissed it before
+  if (isIos && !hasDismissedIosPrompt) {
     return (
       <div className="fixed bottom-20 sm:bottom-4 left-4 right-4 sm:left-auto z-50 animate-fade-in-up">
         <div className="bg-card border border-border-card rounded-lg shadow-2xl p-4 max-w-sm mx-auto flex items-start gap-4">
-          <img src="/icon.svg" alt="Joha Tattoo Icon" className="h-10 w-10 shrink-0 mt-1" />
+          <img src="/icon.svg" alt="Soul Patterns Icon" className="h-10 w-10 shrink-0 mt-1" />
           <div>
             <h3 className="font-bold text-main">Instala la App en tu iPhone</h3>
             <p className="text-sm text-secondary">

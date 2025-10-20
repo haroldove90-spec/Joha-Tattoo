@@ -1,6 +1,44 @@
 import React, { useState } from 'react';
-import { generateTattooFromPrompt } from '../services/geminiService';
+import { generateTattooFromPrompt, addGalleryItem } from '../services/geminiService';
 import Loader from './Loader';
+
+const dataURLtoFile = (dataurl: string, filename: string): File => {
+    const arr = dataurl.split(',');
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    if (!mimeMatch) throw new Error('Invalid data URL');
+    const mime = mimeMatch[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
+};
+
+const handleShareOrDownload = async (base64Image: string, filename: string) => {
+    try {
+        const imageFile = dataURLtoFile(base64Image, filename);
+        if (navigator.canShare && navigator.canShare({ files: [imageFile] })) {
+            await navigator.share({
+                files: [imageFile],
+                title: 'Diseño de Tatuaje - Soul Patterns',
+                text: 'Creado con el Asistente de Diseño IA de Soul Patterns.'
+            });
+            return;
+        }
+    } catch (error) {
+        console.error('Error al compartir la imagen:', error);
+    }
+    // Fallback for browsers that don't support sharing or if sharing fails
+    const link = document.createElement('a');
+    link.href = base64Image;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
 
 const GenerateDesign: React.FC = () => {
     const [prompt, setPrompt] = useState('');
@@ -23,11 +61,8 @@ const GenerateDesign: React.FC = () => {
             const imageUrl = await generateTattooFromPrompt(prompt);
             setGeneratedImage(imageUrl);
 
-            // Auto-save to gallery
-            const gallery = JSON.parse(localStorage.getItem('tattooGallery') || '[]');
-            gallery.unshift(imageUrl); // Add to the beginning of the array
-            localStorage.setItem('tattooGallery', JSON.stringify(gallery));
-            window.dispatchEvent(new Event('storage')); // Notify other components
+            // Auto-save to gallery using IndexedDB
+            await addGalleryItem(imageUrl);
             setSaveSuccess(true);
 
         } catch (err: any) {
@@ -83,15 +118,22 @@ const GenerateDesign: React.FC = () => {
                 {isLoading && <Loader />}
                 {error && <div className="text-red-500 bg-red-900/20 p-4 rounded-lg text-center">{error}</div>}
                 {generatedImage && (
-                    <div className="flex flex-col items-center gap-4 animate-fade-in">
+                    <div className="flex flex-col items-center gap-4 animate-fade-in-up">
                         <div className="bg-white p-2 rounded-lg shadow-2xl shadow-primary/20">
                              <img src={generatedImage} alt="Diseño de tatuaje generado" className="w-72 h-72 object-cover rounded-md"/>
                         </div>
                         {saveSuccess && (
                             <p className="text-green-400 font-semibold text-sm bg-green-900/30 px-4 py-2 rounded-full">
-                                ✓ ¡Guardado en tu galería!
+                                ✓ ¡Guardado en la galería de la app!
                             </p>
                         )}
+                        <button
+                            onClick={() => handleShareOrDownload(generatedImage, `soul-patterns-design-${Date.now()}.png`)}
+                            className="flex items-center gap-2 bg-primary text-primary-contrast font-semibold py-2 px-4 rounded-lg hover:opacity-90 transition-opacity"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.368a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" /></svg>
+                            Compartir Diseño
+                        </button>
                     </div>
                 )}
             </div>

@@ -9,8 +9,25 @@ const TipOfTheDay: React.FC = () => {
         const fetchTip = async () => {
             setIsLoading(true);
             try {
+                const today = new Date().toISOString().split('T')[0];
+                const storedTipData = localStorage.getItem('dailyTattooTip');
+
+                if (storedTipData) {
+                    const { tip: storedTip, date: storedDate } = JSON.parse(storedTipData);
+                    if (storedDate === today) {
+                        setTip(storedTip);
+                        setIsLoading(false);
+                        return; // Use the stored tip for today
+                    }
+                }
+
+                // Fetch a new tip if it's a new day or no tip is stored
                 const newTip = await getTattooTip();
                 setTip(newTip);
+                
+                // Save the new tip with today's date
+                localStorage.setItem('dailyTattooTip', JSON.stringify({ tip: newTip, date: today }));
+
             } catch (err) {
                 setTip('No se pudo cargar el consejo de hoy. ¡Pero sigue practicando!');
             } finally {

@@ -1,13 +1,25 @@
 {
-  "short_name": "Joha Tattoo",
-  "name": "Joha Tattoo AI Designer",
-  "description": "An AI-powered tattoo design application for Joha Tattoo. Users can describe their tattoo ideas, and the app uses generative AI to create unique visual concepts. It also showcases a portfolio and provides contact information.",
+  "short_name": "Soul Patterns",
+  "name": "Soul Patterns AI Designer",
+  "description": "An AI-powered tattoo design application for Soul Patterns. Users can describe their tattoo ideas, and the app uses generative AI to create unique visual concepts. It also showcases a portfolio and provides contact information.",
   "icons": [
     {
-      "src": "/icon.svg",
-      "type": "image/svg+xml",
-      "sizes": "any",
-      "purpose": "any maskable"
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "start_url": "/",

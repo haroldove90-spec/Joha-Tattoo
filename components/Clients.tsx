@@ -1,7 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import useLocalStorage from '../hooks/useLocalStorage';
+import React, { useState, useMemo, useEffect } from 'react';
+import { getAppointments } from '../services/geminiService';
 
-// Duplicating type to avoid complex relative imports
 type Appointment = {
   id: string;
   clientName: string;
@@ -17,9 +16,16 @@ type Client = {
 };
 
 const Clients: React.FC = () => {
-    const [appointments] = useLocalStorage<Appointment[]>('appointments', []);
+    const [appointments, setAppointments] = useState<Appointment[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+
+    useEffect(() => {
+        const loadData = async () => {
+            setAppointments(await getAppointments());
+        };
+        loadData();
+    }, []);
     
     const clients = useMemo(() => {
         const clientMap = new Map<string, Client>();

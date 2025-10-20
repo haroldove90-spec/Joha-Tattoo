@@ -1,7 +1,44 @@
 import React, { useState, useRef, useCallback } from 'react';
 import Loader from './Loader';
-import { createTattooTrace } from '../services/geminiService';
+import { createTattooTrace, addGalleryItem } from '../services/geminiService';
 import { jsPDF } from 'jspdf';
+
+const dataURLtoFileUtil = (dataurl: string, filename: string): File => {
+    const arr = dataurl.split(',');
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    if (!mimeMatch) throw new Error('Invalid data URL');
+    const mime = mimeMatch[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
+};
+
+const handleShareOrDownload = async (base64Image: string, filename: string) => {
+    try {
+        const imageFile = dataURLtoFileUtil(base64Image, filename);
+        if (navigator.canShare && navigator.canShare({ files: [imageFile] })) {
+            await navigator.share({
+                files: [imageFile],
+                title: 'Plantilla de Tatuaje - Soul Patterns',
+                text: 'Creada con el Asistente de Diseño IA de Soul Patterns.'
+            });
+            return;
+        }
+    } catch (error) {
+        console.error('Error al compartir la imagen:', error);
+    }
+    const link = document.createElement('a');
+    link.href = base64Image;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
 
 const CreateTrace: React.FC = () => {
     const [sourceImage, setSourceImage] = useState<string | null>(null);
@@ -25,7 +62,7 @@ const CreateTrace: React.FC = () => {
 
     const openCamera = async () => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
             setIsCameraOpen(true);
             // Use a timeout to ensure the video element is rendered
             setTimeout(() => {
@@ -35,7 +72,7 @@ const CreateTrace: React.FC = () => {
             }, 100);
         } catch (err) {
             console.error("Error al acceder a la cámara:", err);
-            setError("No se pudo acceder a la cámara. Asegúrate de haber otorgado los permisos.");
+            setError("No se pudo acceder a la cámara trasera. Asegúrate de haber otorgado los permisos.");
         }
     };
     
@@ -108,13 +145,8 @@ const CreateTrace: React.FC = () => {
             const stencilUrl = await createTattooTrace(base64Data, sourceFile.type);
             setStencilImage(stencilUrl);
             
-            // Automatically save to gallery upon successful creation
-            const gallery = JSON.parse(localStorage.getItem('tattooGallery') || '[]');
-            if (!gallery.includes(stencilUrl)) {
-                gallery.unshift(stencilUrl);
-                localStorage.setItem('tattooGallery', JSON.stringify(gallery));
-                window.dispatchEvent(new Event('storage'));
-            }
+            // Automatically save to gallery (IndexedDB) upon successful creation
+            await addGalleryItem(stencilUrl);
             setSaveSuccess(true);
 
         } catch (err: any) {
@@ -128,7 +160,7 @@ const CreateTrace: React.FC = () => {
         if (!stencilImage) return;
         const link = document.createElement('a');
         link.href = stencilImage;
-        link.download = 'johana-tatuajes-plantilla.png';
+        link.download = 'soul-patterns-plantilla.png';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -142,7 +174,7 @@ const CreateTrace: React.FC = () => {
         const x = (width - pdfSize) / 2;
         const y = (height - pdfSize) / 2;
         doc.addImage(stencilImage, 'PNG', x, y, pdfSize, pdfSize);
-        doc.save(`johana-tatuajes-plantilla.pdf`);
+        doc.save(`soul-patterns-plantilla.pdf`);
     };
 
     const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
@@ -204,20 +236,21 @@ const CreateTrace: React.FC = () => {
                             </div>
                             {saveSuccess && (
                                 <p className="text-green-400 font-semibold text-sm bg-green-900/30 px-4 py-2 rounded-full mt-4 inline-block">
-                                    ✓ ¡Guardado automáticamente en tu galería!
+                                    ✓ ¡Guardado en la galería de la app!
                                 </p>
                             )}
                             <div className="mt-6 border-t border-border-card pt-4 space-y-4">
                                 <div>
-                                    <h4 className="font-semibold text-main mb-3">Opciones de Descarga</h4>
-                                    <div className="flex flex-col sm:flex-row gap-3">
+                                    <h4 className="font-semibold text-main mb-3">Opciones de Guardado</h4>
+                                    <div className="flex flex-col gap-3">
                                         <button
-                                            onClick={handleDownloadPng}
-                                            className="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition"
+                                            onClick={() => handleShareOrDownload(stencilImage, `soul-patterns-plantilla-${Date.now()}.png`)}
+                                            className="w-full bg-primary text-primary-contrast font-bold py-2 px-4 rounded-lg hover:opacity-90 transition flex items-center justify-center gap-2"
                                         >
-                                            Descargar PNG
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.368a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" /></svg>
+                                            Compartir Plantilla
                                         </button>
-                                        <button onClick={handleDownloadPdf} className="w-full bg-primary text-primary-contrast font-bold py-2 px-4 rounded-lg hover:opacity-90 transition">
+                                        <button onClick={handleDownloadPdf} className="w-full bg-card border border-border-card text-main font-bold py-2 px-4 rounded-lg hover:border-primary transition">
                                             Descargar PDF
                                         </button>
                                     </div>

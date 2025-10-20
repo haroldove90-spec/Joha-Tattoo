@@ -8,7 +8,6 @@ interface BottomNavProps {
 
 const BottomNav: React.FC<BottomNavProps> = ({ activeView, setView }) => {
     
-    // Fix: Use React.ReactNode instead of JSX.Element to resolve the "Cannot find namespace 'JSX'" error.
     const navItems: { view: View; label: string; icon: React.ReactNode }[] = [
         {
             view: 'home',
@@ -26,9 +25,9 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeView, setView }) => {
             icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
         },
         {
-            view: 'clients',
-            label: 'Clientes',
-            icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M15 21a6 6 0 00-9-5.197M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            view: 'sales',
+            label: 'Ventas',
+            icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
         },
         {
             view: 'assistant',
@@ -38,7 +37,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeView, setView }) => {
     ];
     
     // Determine which root view is active for highlighting
-    const mainViews: View[] = ['home', 'gallery', 'agenda', 'clients', 'assistant'];
+    const mainViews: View[] = ['home', 'gallery', 'agenda', 'sales', 'assistant'];
     const activeMainView = mainViews.includes(activeView) ? activeView : 'home';
     
     return (

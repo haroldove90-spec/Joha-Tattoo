@@ -7,11 +7,12 @@ import CreateTrace from './components/CreateTrace';
 import TryOnTattoo from './components/TryOnTattoo';
 import Agenda from './components/Agenda';
 import Clients from './components/Clients';
+import Sales from './components/Sales';
 import BottomNav from './components/BottomNav';
 import Assistant from './components/Assistant';
 import InstallPWA from './components/InstallPWA';
 
-export type View = 'home' | 'gallery' | 'agenda' | 'clients' | 'assistant' | 'generate' | 'trace' | 'try-on';
+export type View = 'home' | 'gallery' | 'agenda' | 'clients' | 'assistant' | 'generate' | 'trace' | 'try-on' | 'sales';
 
 const App: React.FC = () => {
   const [view, setView] = useState<View>('home');
@@ -20,6 +21,23 @@ const App: React.FC = () => {
   useEffect(() => {
     document.body.className = theme;
   }, [theme]);
+
+  // Request persistent storage to protect app data from being auto-cleared.
+  useEffect(() => {
+    const requestPersistence = async () => {
+        if (navigator.storage && navigator.storage.persist) {
+            try {
+                const isPersisted = await navigator.storage.persisted();
+                if (!isPersisted) {
+                    await navigator.storage.persist();
+                }
+            } catch (error) {
+                console.error('Failed to request persistent storage:', error);
+            }
+        }
+    };
+    requestPersistence();
+  }, []);
 
   const toggleTheme = () => {
     setTheme(currentTheme => (currentTheme === 'dark' ? 'light' : 'dark'));
@@ -41,6 +59,8 @@ const App: React.FC = () => {
         return <Agenda />;
       case 'clients':
         return <Clients />;
+       case 'sales':
+        return <Sales />;
       case 'assistant':
         return <Assistant />;
       default:
@@ -55,6 +75,7 @@ const App: React.FC = () => {
       case 'gallery': return 'Galería';
       case 'agenda': return 'Agenda';
       case 'clients': return 'Clientes';
+      case 'sales': return 'Ventas';
       case 'assistant': return 'Asistente';
       case 'generate': return 'Generar Diseño';
       case 'trace': return 'Crear Trazo';
