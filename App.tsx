@@ -19,6 +19,7 @@ const App: React.FC = () => {
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [isKeySelected, setIsKeySelected] = useState(false);
   const [isCheckingKey, setIsCheckingKey] = useState(true);
+  const [keySelectionError, setKeySelectionError] = useState<string | null>(null);
 
   useEffect(() => {
     document.body.className = theme;
@@ -50,12 +51,17 @@ const App: React.FC = () => {
   }, []);
 
   const handleSelectKey = async () => {
+    setKeySelectionError(null); // Clear previous errors
     try {
-      await window.aistudio.openSelectKey();
-      // Per guidelines, assume success after calling to handle potential race conditions.
-      setIsKeySelected(true);
+        if (!window.aistudio || typeof window.aistudio.openSelectKey !== 'function') {
+            throw new Error("aistudio.openSelectKey is not available.");
+        }
+        await window.aistudio.openSelectKey();
+        // Per guidelines, assume success after calling to handle potential race conditions.
+        setIsKeySelected(true);
     } catch (e) {
-      console.error("Could not open API key selection dialog.", e);
+        console.error("Could not open API key selection dialog.", e);
+        setKeySelectionError("No se pudo abrir el diálogo de selección de clave. Por favor, recarga la página e inténtalo de nuevo.");
     }
   };
 
@@ -122,6 +128,13 @@ const App: React.FC = () => {
           </svg>
           <h1 className="text-2xl font-bold font-cinzel text-main mb-4">API Key Requerida</h1>
           <p className="text-secondary mb-6">Esta aplicación utiliza modelos de IA generativa que pueden requerir una API key con la facturación habilitada. Por favor, selecciona tu clave para continuar.</p>
+          
+          {keySelectionError && (
+              <div className="bg-red-900/30 text-red-400 p-3 rounded-md mb-4 text-sm" role="alert">
+                  {keySelectionError}
+              </div>
+          )}
+
           <button onClick={handleSelectKey} className="w-full bg-primary text-primary-contrast font-bold py-3 px-8 rounded-lg hover:opacity-90 transition-opacity">
             Seleccionar API Key
           </button>
