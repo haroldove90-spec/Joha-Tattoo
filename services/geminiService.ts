@@ -1,16 +1,13 @@
 import { GoogleGenAI, Modality, Chat } from "@google/genai";
 
-let aiInstance: GoogleGenAI | null = null;
-
 /**
- * Lazily initializes and returns a singleton instance of the GoogleGenAI client.
+ * Returns a new instance of the GoogleGenAI client.
+ * This ensures the latest API key from the environment is used for each call,
+ * which is crucial after the user selects a key via the UI.
  * The underlying GoogleGenAI constructor will throw an error if the API key is missing.
  */
 const getAiInstance = (): GoogleGenAI => {
-    if (!aiInstance) {
-        aiInstance = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    }
-    return aiInstance;
+    return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
 /**
