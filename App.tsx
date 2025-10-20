@@ -9,6 +9,7 @@ import Agenda from './components/Agenda';
 import Clients from './components/Clients';
 import BottomNav from './components/BottomNav';
 import Assistant from './components/Assistant';
+import InstallPWA from './components/InstallPWA';
 
 export type View = 'home' | 'gallery' | 'agenda' | 'clients' | 'assistant' | 'generate' | 'trace' | 'try-on';
 
@@ -74,6 +75,7 @@ const App: React.FC = () => {
         {renderView()}
       </main>
       <BottomNav activeView={view} setView={setView} />
+      <InstallPWA />
     </div>
   );
 };

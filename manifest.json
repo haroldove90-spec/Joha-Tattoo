@@ -1,0 +1,26 @@
+{
+  "short_name": "Joha Tattoo",
+  "name": "Joha Tattoo AI Designer",
+  "description": "An AI-powered tattoo design application for Joha Tattoo. Users can describe their tattoo ideas, and the app uses generative AI to create unique visual concepts. It also showcases a portfolio and provides contact information.",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#A162F7",
+  "background_color": "#100F15"
+}
