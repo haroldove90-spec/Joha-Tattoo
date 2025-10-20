@@ -10,7 +10,6 @@ import Clients from './components/Clients';
 import BottomNav from './components/BottomNav';
 import Assistant from './components/Assistant';
 import InstallPWA from './components/InstallPWA';
-import Loader from './components/Loader';
 
 export type View = 'home' | 'gallery' | 'agenda' | 'clients' | 'assistant' | 'generate' | 'trace' | 'try-on';
 
@@ -18,50 +17,41 @@ const App: React.FC = () => {
   const [view, setView] = useState<View>('home');
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [isKeySelected, setIsKeySelected] = useState(false);
-  const [isCheckingKey, setIsCheckingKey] = useState(true);
   const [keySelectionError, setKeySelectionError] = useState<string | null>(null);
 
   useEffect(() => {
     document.body.className = theme;
   }, [theme]);
   
+  // Check for an existing API key in the background.
+  // The UI defaults to showing the key selection screen, and will switch to the main app if a key is found.
   useEffect(() => {
     const checkApiKey = async () => {
-      // It might take a moment for the aistudio object to be available.
-      // This simple retry logic helps ensure we can check for the key.
-      let attempts = 0;
-      const interval = setInterval(async () => {
-        if (window.aistudio || attempts > 5) {
-          clearInterval(interval);
-          try {
-            const hasKey = await window.aistudio.hasSelectedApiKey();
-            setIsKeySelected(hasKey);
-          } catch (e) {
-            console.error("Error checking for API key, assuming none is selected.", e);
-            setIsKeySelected(false);
-          } finally {
-            setIsCheckingKey(false);
-          }
+      // A short delay can help ensure the aistudio object is initialized.
+      await new Promise(resolve => setTimeout(resolve, 200));
+      try {
+        if (window.aistudio && await window.aistudio.hasSelectedApiKey()) {
+          setIsKeySelected(true);
         }
-        attempts++;
-      }, 200);
+      } catch (e) {
+        // It's fine if this fails; the user is already on the key selection screen.
+        console.error("Could not check for existing API key:", e);
+      }
     };
-
     checkApiKey();
   }, []);
 
   const handleSelectKey = async () => {
-    setKeySelectionError(null); // Clear previous errors
+    setKeySelectionError(null);
     try {
-        if (!window.aistudio || typeof window.aistudio.openSelectKey !== 'function') {
-            throw new Error("aistudio.openSelectKey is not available.");
-        }
-        await window.aistudio.openSelectKey();
-        // Per guidelines, assume success after calling to handle potential race conditions.
-        setIsKeySelected(true);
+      // Per guidelines, we assume `window.aistudio.openSelectKey` is available.
+      // If it's not ready, the catch block will handle the error gracefully.
+      await window.aistudio.openSelectKey();
+      // Assume success after calling to handle potential race conditions.
+      setIsKeySelected(true);
     } catch (e) {
-        console.error("Could not open API key selection dialog.", e);
-        setKeySelectionError("No se pudo abrir el diálogo de selección de clave. Por favor, recarga la página e inténtalo de nuevo.");
+      console.error("Could not open API key selection dialog.", e);
+      setKeySelectionError("No se pudo abrir el diálogo de selección de clave. El entorno podría no estar listo. Por favor, espera un momento y vuelve a intentarlo.");
     }
   };
 
@@ -108,17 +98,6 @@ const App: React.FC = () => {
     }
   }
   
-  if (isCheckingKey) {
-    return (
-      <div className="bg-app text-main min-h-screen flex items-center justify-center">
-        <div className="text-center">
-             <h1 className="text-xl font-bold font-cinzel text-main mb-4">Verificando configuración...</h1>
-            <Loader />
-        </div>
-      </div>
-    );
-  }
-
   if (!isKeySelected) {
     return (
        <div className="bg-app text-main min-h-screen flex items-center justify-center p-4">
