@@ -1,6 +1,6 @@
 {
-  "name": "Soul Patterns AI Designer",
-  "description": "An AI-powered tattoo design application for Soul Patterns. Users can describe their tattoo ideas, and the app uses generative AI to create unique visual concepts. It also showcases a portfolio and provides contact information.",
+  "name": "Soul Patterns",
+  "description": "Tu asistente de diseño de tatuajes IA. Genera diseños, crea plantillas, gestiona tu agenda y más.",
   "requestFramePermissions": [
     "camera"
   ]
